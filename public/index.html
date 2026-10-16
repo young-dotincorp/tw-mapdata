@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tactile Worlds 지도 데이터</title>
+<style>body{font:16px/1.6 system-ui,sans-serif;max-width:40rem;margin:2rem auto;padding:0 1rem;color:#222}code{background:#f3f0ea;padding:0 .3em;border-radius:4px}</style>
+<h1>Tactile Worlds 보행·접근성 지도 데이터</h1>
+<p><a href="https://tactileworlds.com">Tactile Worlds</a>의 Dot Maps가 닷패드 촉각 지도를 빠르게 그리기 위해 쓰는 데이터입니다.
+대한민국 OpenStreetMap에서 보도·횡단보도·점자블록·계단·버스정류장·건물 입구·도로 이름만 골라 매주 갱신합니다.</p>
+<ul>
+ <li>목록: <a href="v1/manifest.json"><code>v1/manifest.json</code></a> (기준일·칸 수)</li>
+ <li>칸 파일: <code>v1/cells/{la}/{la}_{lo}.json</code> — 위도·경도 0.01도 격자, <code>floor(좌표×100)</code></li>
+</ul>
+<p>지도 데이터 © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>,
+<a href="https://opendatacommons.org/licenses/odbl/">ODbL 1.0</a> 라이선스로 제공됩니다.
+점자블록·음향신호기가 빠진 곳은 <a href="https://www.openstreetmap.org/edit">OpenStreetMap에 직접 더해</a> 주시면 다음 주에 반영됩니다.</p>
+</html>
