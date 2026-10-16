@@ -1,0 +1,82 @@
+# 매주 한 번: 한국 OSM 원본 → 보행·접근성 요소만 골라 격자 파일로 → GitHub Pages 에 공개(무료)
+# 실패하면 배포 단계가 돌지 않아 «지난주 데이터»가 그대로 남는다(안전).
+name: build-mapdata
+
+on:
+  schedule:
+    - cron: "17 18 * * 0"   # 매주 일요일 18:17 UTC = 월요일 03:17 KST
+  workflow_dispatch: {}     # Actions 탭에서 «Run workflow» 로 바로 실행
+
+permissions:
+  contents: write   # 한 달에 한 번 빈 커밋(아래 keepalive) — 공개 저장소는 60일 활동이 없으면 예약 실행이 멈춘다
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 도구 설치
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq osmium-tool
+          pip install --quiet "osmium>=4,<5"
+
+      - name: 한국 OSM 원본 받기 (Geofabrik, 주 1회)
+        run: |
+          curl -fsSL --retry 3 --retry-delay 30 \
+            -A "TactileWorlds-mapdata/1.0 (+https://tactileworlds.com)" \
+            -o kr.osm.pbf https://download.geofabrik.de/asia/south-korea-latest.osm.pbf
+          ls -lh kr.osm.pbf
+
+      - name: 보행·접근성 요소만 거르기
+        run: |
+          osmium tags-filter kr.osm.pbf \
+            w/highway=footway,path,pedestrian,steps,living_street,crossing \
+            w/footway=crossing \
+            nw/tactile_paving \
+            n/highway=crossing,bus_stop \
+            n/public_transport=platform \
+            n/entrance \
+            w/highway=primary,secondary,tertiary,residential,unclassified,service,trunk,road \
+            -o filtered.osm.pbf --overwrite
+          ls -lh filtered.osm.pbf
+
+      - name: 격자 파일 만들기
+        run: |
+          mkdir -p site
+          cp -r public/. site/
+          python build_cells.py filtered.osm.pbf site --max-mb 900
+          touch site/.nojekyll
+          du -sh site
+
+      - name: 예약 실행 멈춤 방지(매달 첫 주 빈 커밋)
+        if: github.event_name == 'schedule'
+        run: |
+          if [ "$(date -u +%d)" -le 7 ]; then
+            git config user.name "tw-mapdata-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "keepalive $(date -u +%Y-%m)"
+            git push
+          fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
