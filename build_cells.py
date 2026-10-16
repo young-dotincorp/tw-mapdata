@@ -107,19 +107,43 @@ class Collector(osmium.SimpleHandler):
         if len(g) < 4:
             self.stats["way_skipped"] += 1
             return
-        el = {"type": "way", "id": w.id, "tags": keep_tags(w.tags), "g": g}
-        # 지나가는 모든 칸에 넣는다(칸 경계에 걸친 길이 잘리지 않게). 앱은 id 로 중복을 지운다.
+        tags = keep_tags(w.tags)
         lats, lons = g[0::2], g[1::2]
-        c0, c1 = cell_of(min(lats), min(lons)), cell_of(max(lats), max(lons))
-        if (c1[0] - c0[0] + 1) * (c1[1] - c0[1] + 1) > 400:  # 비정상적으로 긴 길(수십 km) — 칸 폭주 방지
-            self.stats["way_too_long"] += 1
-            return
-        for la in range(c0[0], c1[0] + 1):
-            for lo in range(c0[1], c1[1] + 1):
-                self.cells[(la, lo)].append(el)
-        self.stats["way"] += 1
-        for a, b in zip(lats, lons):
-            self._grow(a, b)
+        # 【v1.1】 길을 «칸마다 그 칸을 지나는 조각»으로 자른다.
+        #   예전처럼 길 전체를 지나가는 모든 칸에 통째로 넣으면, 수십 km 도로(수천 점)가 칸 수백 개에
+        #   복제되어 결과가 수 GB 로 불어난다(첫 실행 실패 원인 후보). 조각 끝은 이웃 칸까지 한 점 겹쳐
+        #   앱에서 이어 붙여도 끊기지 않는다(경로 엔진이 같은 좌표를 한 노드로 합친다).
+        segs = defaultdict(list)  # cell -> [segment index]
+        for i in range(len(lats) - 1):
+            c0 = cell_of(min(lats[i], lats[i + 1]), min(lons[i], lons[i + 1]))
+            c1 = cell_of(max(lats[i], lats[i + 1]), max(lons[i], lons[i + 1]))
+            if (c1[0] - c0[0] + 1) * (c1[1] - c0[1] + 1) > 16:  # 한 구간이 4칸 넘게 뻗음(데이터 오류) → 건너뜀
+                self.stats["seg_too_long"] += 1
+                continue
+            for la in range(c0[0], c1[0] + 1):
+                for lo in range(c0[1], c1[1] + 1):
+                    segs[(la, lo)].append(i)
+        part = 0
+        for cell, idx in segs.items():
+            run = [idx[0]]
+            runs = []
+            for j in idx[1:]:
+                if j == run[-1] + 1:
+                    run.append(j)
+                else:
+                    runs.append(run); run = [j]
+            runs.append(run)
+            for r in runs:
+                pts = []
+                for k in range(r[0], r[-1] + 2):
+                    pts.append(lats[k]); pts.append(lons[k])
+                self.cells[cell].append({"type": "way", "id": w.id, "p": part, "tags": tags, "g": pts})
+                part += 1
+        if part:
+            self.stats["way"] += 1
+            self.stats["way_parts"] += part
+            for a, b in zip(lats, lons):
+                self._grow(a, b)
 
 
 def source_date(path):
