@@ -25,6 +25,8 @@ from collections import defaultdict
 import osmium
 
 CELL = 0.1
+# 앱 koFuzzy KIND_RANK 와 같은 순서(역 → 복지 → 학교 → 관공서 → 병원 → 정류장 → 공원 → 상점 → 그 밖)
+KIND_ORDER = {k: i for i, k in enumerate("sceghbpmo")}
 SCALE = 100000
 
 
@@ -148,7 +150,7 @@ def main():
     os.makedirs(root, exist_ok=True)
     total, biggest = 0, (0, None)
     for (la, lo), rows in cells.items():
-        rows.sort(key=lambda r: ("scegpbmo".index(r[3]), r[0]))
+        rows.sort(key=lambda r: (KIND_ORDER.get(r[3], 9), r[0]))   # 모르는 종류 글자가 와도 멈추지 않게(뒤로)
         d = os.path.join(root, str(la))
         os.makedirs(d, exist_ok=True)
         body = json.dumps({"v": 1, "rows": rows}, ensure_ascii=False, separators=(",", ":"))
