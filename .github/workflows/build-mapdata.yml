@@ -64,6 +64,26 @@ jobs:
           touch site/.nojekyll
           du -sh site
 
+      # 【1,610】 검색 2단계: 이름 있는 곳(역·지하철 출구·학교·복지관·병원·관공서·정류장·공원·상점)만 골라
+      #   0.1도 칸별 지명 색인 → 앱이 오타·초성·부분 이름으로 찾는다. 실패해도 지도(격자 파일)는 그대로 배포된다.
+      - name: 지명 색인 만들기(검색 2단계)
+        continue-on-error: true
+        run: |
+          osmium tags-filter kr.osm.pbf \
+            n/railway=station,halt,subway_entrance \
+            nw/public_transport=station \
+            n/highway=bus_stop \
+            n/public_transport=platform \
+            nw/amenity=social_facility,community_centre,school,university,college,library,kindergarten,hospital,clinic,pharmacy,doctors,townhall,police,post_office,courthouse,fire_station,bank,marketplace \
+            nw/office=government \
+            nw/leisure=park \
+            nw/tourism=attraction,museum,gallery,viewpoint \
+            nw/shop=convenience,supermarket,department_store,mall \
+            -o places.osm.pbf --overwrite
+          ls -lh places.osm.pbf
+          python build_places.py places.osm.pbf site --max-mb 150
+          du -sh site/v1/names
+
       - name: 예약 실행 멈춤 방지(매달 첫 주 빈 커밋)
         if: github.event_name == 'schedule'
         run: |
