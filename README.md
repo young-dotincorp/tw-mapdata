@@ -6,6 +6,7 @@ Tactile Worlds 의 Dot Maps 가 닷패드 촉각 지도를 **1초 안팎으로**
 
 - 결과: `https://young-dotincorp.github.io/tw-mapdata/v1/manifest.json`
 - 칸 파일: `v1/cells/{la}/{la}_{lo}.json` (위도·경도 0.01도, `floor(좌표×100)`), 빈 칸은 파일 없음(404)
+- 지명 색인(검색 2단계 · 1,610): `v1/names/index.json` + `v1/names/{la}/{la}_{lo}.json` (0.1도, `floor(좌표×10)`) — 한 줄 = [이름, 위도×1e5, 경도×1e5, 종류]. 역·지하철 출구(이름 없으면 «가까운 역 N번 출구»)·학교·복지관·병원·관공서·정류장·공원·상점. 만들다 실패해도 지도 파일은 그대로 배포됩니다.
 - 데이터: © OpenStreetMap contributors, ODbL 1.0
 
 ## 처음 한 번 설정
